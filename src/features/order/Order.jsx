@@ -1,6 +1,6 @@
 // Test ID: IIDSAT
 
-import { useLoaderData } from "react-router-dom";
+import { useFetcher, useLoaderData } from "react-router-dom";
 import { getOrder } from "../../services/apiRestaurant";
 import {
   calcMinutesLeft,
@@ -9,9 +9,19 @@ import {
 } from "../../utils/helpers";
 
 import OrderItem from "./OrderItem";
+import { useEffect } from "react";
 
 function Order() {
   const order = useLoaderData();
+
+  const fetcher = useFetcher();
+
+  useEffect(() => {
+    if (!fetcher.data && fetcher.state === "idle") {
+      fetcher.load("/menu");
+    }
+  }, [fetcher]);
+
   const {
     id,
     status,
@@ -35,7 +45,7 @@ function Order() {
             </span>
           )}
           <span className="rounded-full bg-green-500 px-3 py-1 text-sm font-medium uppercase tracking-wide text-green-50">
-            {status} order
+            {deliveryIn > 0 ? `${status} order` : `Delivered`}
           </span>
         </div>
       </div>
@@ -44,16 +54,25 @@ function Order() {
         <p>
           {deliveryIn >= 0
             ? `Only ${calcMinutesLeft(estimatedDelivery)} minutes left 😃`
-            : "Order should have arrived"}
+            : "Order delivered ✅"}
         </p>
         <p className="text-xs text-stone-500">
-          (Estimated delivery: {formatDate(estimatedDelivery)})
+          ({deliveryIn >= 0 ? `Estimated delivery:` : `Delivered at:`}{" "}
+          {formatDate(estimatedDelivery)})
         </p>
       </div>
 
       <ul className="divide-y divide-stone-200 border-b border-t">
-        {cart.map((item, key) => (
-          <OrderItem item={item} key={key} />
+        {cart.map((item) => (
+          <OrderItem
+            item={item}
+            isLoadingIngredients={fetcher.state === "loading"}
+            key={item.pizzaId}
+            ingredients={
+              fetcher?.data?.find((el) => el.id === item.pizzaId)
+                ?.ingredients ?? []
+            }
+          />
         ))}
       </ul>
 
